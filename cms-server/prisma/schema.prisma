@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum STATUS {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ROLE {
+  USER
+  MODERATOR
+  ADMIN
+  SUPERUSER
+}
+
+enum RETURN_POLICY {
+  NO_RETURN
+  REFUND
+  EXCHANGE
+  STORE_CREDIT
+}
+
+enum WARRANTY_PERIOD {
+  NO_WARRANTY
+  ONE_MONTH
+  THREE_MONTHS
+  SIX_MONTHS
+  ONE_YEAR
+  TWO_YEARS
+  THREE_YEARS
+  FIVE_YEARS
+  LIFETIME
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethod {
+  COD
+  ESEWA
+  KHALTI
+  DEBIT_CARD
+  CREDIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id                String     @id @default(uuid()) @db.Uuid
+  fullName          String
+  email             String     @unique
+  phoneNumber       String?    @unique
+  password          String
+  image             String?    @default("https://avatars.githubusercontent.com/u/124599?v=4")
+  otp               String?
+  resetToken        String?
+  resetTokenExpires DateTime?
+  status            STATUS     @default(ACTIVE)
+  role              ROLE       @default(USER)
+  isVerified        Boolean    @default(false)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  Order             Order[]
+  CartItem          CartItem[]
+}
+
+model Brand {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @unique
+  image     String?   @default("https://h4vn9728cs.ufs.sh/f/0Mq0TDgvAbJOzhY5IyoMFMl4gTPv5ZHdWw9GCNmie7thXz0S")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Product   Product[]
+}
+
+model Category {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @unique
+  image     String?   @default("https://h4vn9728cs.ufs.sh/f/0Mq0TDgvAbJOzhY5IyoMFMl4gTPv5ZHdWw9GCNmie7thXz0S")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Product   Product[]
+}
+
+model Product {
+  id             String         @id @default(uuid()) @db.Uuid
+  name           String         @unique
+  slug           String?        @unique
+  description    String
+  sku            String         @unique
+  tags           String[]
+  sizes          String[]
+  colors         String[]
+  thumbnail      String         @default("https://h4vn9728cs.ufs.sh/f/0Mq0TDgvAbJOzhY5IyoMFMl4gTPv5ZHdWw9GCNmie7thXz0S")
+  price          Float
+  dimensions     String?
+  isPublished    Boolean        @default(false)
+  discount       Float          @default(0)
+  currency       String         @default("NPR")
+  isFeatured     Boolean        @default(false)
+  isRefundable   Boolean        @default(false)
+  returnPolicy   RETURN_POLICY? @default(NO_RETURN)
+  video          String?
+  stock          Int            @default(0)
+  stockThreshold Int?           @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  brand          Brand?         @relation(fields: [brandId], references: [id])
+  brandId        String?        @db.Uuid
+  category       Category?      @relation(fields: [categoryId], references: [id])
+  categoryId     String?        @db.Uuid
+  subCategoryId  String?        @db.Uuid
+  ProductImage   ProductImage[]
+  OrderItems     OrderItem[]
+  CartItem       CartItem[]
+}
+
+model ProductImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  image     String
+  altText   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String   @db.Uuid
+}
+
+model CartItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  productId String   @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+}
+
+model Order {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @db.Uuid
+  user            User          @relation(fields: [userId], references: [id])
+  status          OrderStatus   @default(PENDING)
+  totalAmount     Float         @default(0.0)
+  shippingAddress String
+  billingAddress  String
+  paymentMethod   PaymentMethod @default(COD)
+  paymentStatus   PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  orderItems      OrderItem[]
+  shippingCost    Float         @default(0.0)
+  trackingNumber  String?
+  deliveryDate    DateTime?
+  notes           String?
+}
+
+model OrderItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  orderId   String   @db.Uuid
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String   @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  price     Float
+  total     Float
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
